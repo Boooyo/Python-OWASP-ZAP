@@ -1,41 +1,78 @@
 import time
+import logging
 from zapv2 import ZAPv2
 
-# ZAP 프록시의 주소와 포트 설정
-zap = ZAPv2(proxies={'http': 'http://127.0.0.1:8080', 'https': 'http://127.0.0.1:8080'})
+# 로거 설정
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-target_url = 'http://example.com'
+def initialize_zap(proxy_address='127.0.0.1', proxy_port=8080):
+    """
+    ZAP 프록시 초기화
+    """
+    logger.info("Initializing ZAP proxy")
+    return ZAPv2(proxies={'http': f'http://{proxy_address}:{proxy_port}', 'https': f'http://{proxy_address}:{proxy_port}'})
 
-# 대상 사이트로 접근
-print(f"Accessing target URL {target_url}")
-zap.urlopen(target_url)
-time.sleep(2)  # 잠시 대기
+def access_target(zap, target_url):
+    """
+    대상 사이트로 접근
+    """
+    logger.info(f"Accessing target URL: {target_url}")
+    zap.urlopen(target_url)
+    time.sleep(2)  # 잠시 대기
 
-# 대상 사이트를 스파이더링(크롤링)
-print(f"Spidering target URL {target_url}")
-scan_id = zap.spider.scan(target_url)
-while int(zap.spider.status(scan_id)) < 100:
-    print(f"Spider progress: {zap.spider.status(scan_id)}%")
-    time.sleep(2)
-print("Spider completed")
+def spider_target(zap, target_url):
+    """
+    대상 사이트 스파이더링
+    """
+    logger.info(f"Spidering target URL: {target_url}")
+    scan_id = zap.spider.scan(target_url)
+    while int(zap.spider.status(scan_id)) < 100:
+        logger.info(f"Spider progress: {zap.spider.status(scan_id)}%")
+        time.sleep(2)
+    logger.info("Spider completed")
 
-# 대상 사이트를 활성 스캔
-print(f"Scanning target URL {target_url}")
-scan_id = zap.ascan.scan(target_url)
-while int(zap.ascan.status(scan_id)) < 100:
-    print(f"Scan progress: {zap.ascan.status(scan_id)}%")
-    time.sleep(5)
-print("Active scan completed")
+def scan_target(zap, target_url):
+    """
+    대상 사이트 활성 스캔
+    """
+    logger.info(f"Scanning target URL: {target_url}")
+    scan_id = zap.ascan.scan(target_url)
+    while int(zap.ascan.status(scan_id)) < 100:
+        logger.info(f"Scan progress: {zap.ascan.status(scan_id)}%")
+        time.sleep(5)
+    logger.info("Active scan completed")
 
-# 취약점 보고서 출력
-print("Generating report")
-alerts = zap.core.alerts()
-for alert in alerts:
-    print(f"Alert: {alert['alert']}")
-    print(f"Risk: {alert['risk']}")
-    print(f"URL: {alert['url']}")
-    print(f"Description: {alert['description']}")
-    print(f"Solution: {alert['solution']}")
-    print()
+def generate_report(zap):
+    """
+    취약점 보고서 출력
+    """
+    logger.info("Generating report")
+    alerts = zap.core.alerts()
+    for alert in alerts:
+        logger.info(f"Alert: {alert['alert']}")
+        logger.info(f"Risk: {alert['risk']}")
+        logger.info(f"URL: {alert['url']}")
+        logger.info(f"Description: {alert['description']}")
+        logger.info(f"Solution: {alert['solution']}")
+        logger.info("")
 
-print("Scan completed")
+def main():
+    # 사용자 입력 받기
+    target_url = input("Enter the target URL: ")
+    proxy_address = input("Enter the proxy address (default: 127.0.0.1): ") or '127.0.0.1'
+    proxy_port = input("Enter the proxy port (default: 8080): ") or 8080
+
+    # ZAP 프록시 초기화
+    zap = initialize_zap(proxy_address, proxy_port)
+
+    # 대상 사이트 스캔
+    access_target(zap, target_url)
+    spider_target(zap, target_url)
+    scan_target(zap, target_url)
+
+    # 취약점 보고서 생성
+    generate_report(zap)
+
+if __name__ == "__main__":
+    main()
